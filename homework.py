@@ -21,7 +21,7 @@ PRACTICUM_TOKEN = os.getenv('PRAKTIKUN_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TOKEN_BOT')
 TELEGRAM_CHAT_ID = os.getenv('chat_id')
 
-RETRY_TIME = 5
+RETRY_TIME = 300
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
