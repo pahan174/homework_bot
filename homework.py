@@ -66,7 +66,7 @@ def get_api_answer(current_timestamp):
             raise
         return response.json()
     except requests.exceptions.RequestException:
-        logger.error('Запрос вернул код отличный от 200')
+        logger.error('Ошибка при запросе ответа от API')
 
 
 def check_response(response):
@@ -76,9 +76,9 @@ def check_response(response):
         response (dict): получает ответ API, приведенный к типам данных Python
 
     Raises:
-        TypeError: _description_
-        Exception: _description_
-        TypeError: _description_
+        TypeError: Ответ пришел не в виде словаря
+        Exception: В ответе API нет ключа "homeworks"
+        TypeError: Ответ пришел не в виде списка
 
     Returns:
         list: функция должна вернуть список домашних работ
@@ -103,7 +103,7 @@ def parse_status(homework):
         homework (list): один элемент из списка домашних работ.
 
     Raises:
-        KeyError: _description_
+        KeyError: Обнаружен недокументированный статус домашней работы
 
     Returns:
         str:  подготовленная для отправки в Telegram строка,
