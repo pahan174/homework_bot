@@ -7,26 +7,18 @@ import logging
 import sys
 
 load_dotenv()
-
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler(stream=sys.stdout)
-formatter = logging.Formatter(
-    '%(asctime)s - %(levelname)s  - %(message)s'
-)
-handler.formatter = formatter
-logger.addHandler(handler)
 
 PRACTICUM_TOKEN = os.getenv('PRAKTIKUN_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TOKEN_BOT')
-TELEGRAM_CHAT_ID = os.getenv('chat_id')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 RETRY_TIME = 300
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
 
-HOMEWORK_STATUSES = {
+HOMEWORK_VERDICTS = {
     'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
     'reviewing': 'Работа взята на проверку ревьюером.',
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
@@ -43,9 +35,10 @@ def send_message(bot, message):
     """
     try:
         bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
-        logger.info('Успешная отправка сообщения в Telegramm')
     except Exception:
         logger.error('Сообщение в Telegramm не отправлено')
+    else:
+        logger.info('Успешная отправка сообщения в Telegramm')
 
 
 def get_api_answer(current_timestamp):
@@ -84,13 +77,13 @@ def check_response(response):
         list: функция должна вернуть список домашних работ
         (он может быть и пустым), доступный в ответе API по ключу 'homeworks'.
     """
-    if type(response) is not dict:
+    logger.debug('Запуск функции для проверки ответа API на корректность')
+    if not isinstance(response, dict):
         logger.error('Ответ пришел не в виде словаря')
         raise TypeError('Ответ пришел не в виде словаря')
-    if 'homeworks' not in response:
-        logger.error('В ответе API нет ключа "homeworks"')
+    if ('homeworks' not in response) or ('current_date' not in response):
         raise Exception
-    if type(response.get('homeworks')) is not list:
+    if not isinstance(response.get('homeworks'), list):
         logger.error('Ответ пришел не в виде списка')
         raise TypeError('Ответ пришел не в виде списка')
     return response.get('homeworks')
@@ -111,10 +104,9 @@ def parse_status(homework):
     """
     homework_name = homework.get('homework_name')
     homework_status = homework.get('status')
-    if homework_status not in HOMEWORK_STATUSES:
-        logger.error('Обнаружен недокументированный статус домашней работы')
-        raise KeyError
-    verdict = HOMEWORK_STATUSES[homework_status]
+    if homework_status not in HOMEWORK_VERDICTS:
+        raise KeyError('Обнаружен недокументированный статус домашней работы')
+    verdict = HOMEWORK_VERDICTS[homework_status]
     message = f'Изменился статус проверки работы "{homework_name}" - {verdict}'
     return message
 
@@ -127,7 +119,7 @@ def check_tokens():
         boolean: Если отсутствует хотя бы одна переменная окружения
         — функция должна вернуть False, иначе — True.
     """
-    if PRACTICUM_TOKEN and TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
+    if all((PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)):
         return True
     logger.critical('Отсутствие переменных окружения во время запуска бота')
     return False
@@ -150,14 +142,21 @@ def main():
                 for hw in homework_dict:
                     send_message(bot, parse_status(hw))
             current_timestamp = response.get('current_date')
-            time.sleep(RETRY_TIME)
-
         except Exception as error:
             logger.critical(f'Сбой в работе программы: {error}')
             time.sleep(RETRY_TIME)
         else:
             logger.info('Все прошло удачно!')
+            time.sleep(RETRY_TIME)
 
 
 if __name__ == '__main__':
+
+    logger.setLevel(logging.DEBUG)
+    handler = logging.StreamHandler(stream=sys.stdout)
+    formatter = logging.Formatter(
+        '%(asctime)s - %(levelname)s  - %(message)s'
+    )
+    handler.formatter = formatter
+    logger.addHandler(handler)
     main()
